@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: .
+      target: production        # Uses the fully optimized production stage
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    # No volume mounts in prod — image is the source of truth
+    # No dev command override — uses CMD from Dockerfile
