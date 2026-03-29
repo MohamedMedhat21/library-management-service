@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "library management App Debugger",
+      "port": 33335,
+      "remoteRoot": "/var/app",
+      "localRoot": "${workspaceFolder}",
+      "restart": true
+    },
+  ]
+}
