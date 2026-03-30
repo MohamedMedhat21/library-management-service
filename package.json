@@ -17,7 +17,15 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "typeorm": "ts-node ./node_modules/typeorm/cli",
+    "migration:run:dev": "npm run typeorm migration:run -- -d ./src/config/typeorm.ts",
+    "migration:run": "npm run typeorm migration:run -- -d dist/config/typeorm.js",
+    "migration:generate": "npm run typeorm -- -d ./src/config/typeorm.ts migration:generate ./src/infrastructure/database/migrations/$npm_config_name",
+    "migration:create": "npm run typeorm -- migration:create ./src/infrastructure/database/migrations/$npm_config_name",
+    "migration:generate:win": "npm run typeorm -- -d ./src/config/typeorm.ts migration:generate ./src/infrastructure/database/migrations/%npm_config_name%",
+    "migration:create:win": "npm run typeorm -- migration:create ./src/infrastructure/database/migrations/%npm_config_name%",
+    "migration:revert": "npm run typeorm -- -d ./src/config/typeorm.ts migration:revert"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.1.0",
@@ -27,6 +35,8 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
     "cache-manager": "^7.2.8",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "ioredis": "^5.10.1",
     "mysql2": "^3.20.0",
     "reflect-metadata": "^0.2.2",

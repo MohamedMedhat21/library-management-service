@@ -6,7 +6,7 @@ dotenvConfig({ path: '.env' });
 
 const config = {
   type: 'mysql',
-  host: process.env.DATABASE_HOST,
+  host: process.env.DATABASE_HOST || 'localhost',
   port: +(process.env.DATABASE_PORT || 3306),
   username: process.env.DATABASE_USERNAME,
   password: process.env.DATABASE_PASSWORD,
@@ -16,7 +16,13 @@ const config = {
   autoLoadEntities: true,
   synchronize: false,
   extra: {
+    connectionLimit: process.env.DATABASE_MAX_CONNECTIONS || 100,
+    maxIdle: process.env.DATABASE_MAX_CONNECTIONS || 100,
     idleTimeout: 50000,
+    waitForConnections: true,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 5000,
   },
   bigNumberStrings: false,
 };
