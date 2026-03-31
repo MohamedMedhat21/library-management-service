@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { CreateBookDto } from './dtos/create-book.dto';
 import { UpdateBookDto } from './dtos/update-book.dto';
+import { BookResponseDto } from './dtos/book-response.dto';
 import { Book } from './entities/book.entity';
 import { RedisService } from 'src/infrastructure/cache/redis.service';
 
@@ -21,7 +22,7 @@ export class BooksService {
     private readonly redisService: RedisService,
   ) {}
 
-  async create(dto: CreateBookDto): Promise<Book> {
+  async create(dto: CreateBookDto): Promise<BookResponseDto> {
     const existing = await this.bookRepository.findOne({
       where: { isbn: dto.isbn },
       withDeleted: true,
@@ -38,30 +39,36 @@ export class BooksService {
 
     await this.redisService.del(BOOKS_CACHE_KEY);
 
-    return saved;
+    return BookResponseDto.fromEntity(saved);
   }
 
-  async findAll(): Promise<Book[]> {
+  async findAll(): Promise<BookResponseDto[]> {
+    // 1. Try cache first
     const cached = await this.redisService.get(BOOKS_CACHE_KEY);
     if (cached) {
-      return JSON.parse(cached) as Book[];
+      return JSON.parse(cached) as BookResponseDto[];
     }
 
+    // 2. Cache miss — query DB
     const books = await this.bookRepository.find({
       order: { createdAt: 'DESC' },
     });
 
+    const dtos = BookResponseDto.fromEntities(books);
+
+    // 3. Cache the mapped DTOs, not the raw entities —
+    //    this way the cached shape is already clean on the way out
     await this.redisService.set(
       BOOKS_CACHE_KEY,
-      JSON.stringify(books),
+      JSON.stringify(dtos),
       BOOKS_CACHE_TTL,
     );
 
-    return books;
+    return dtos;
   }
 
-  async search(query: string): Promise<Book[]> {
-    return this.bookRepository.find({
+  async search(query: string): Promise<BookResponseDto[]> {
+    const books = await this.bookRepository.find({
       where: [
         { title: ILike(`%${query}%`) },
         { author: ILike(`%${query}%`) },
@@ -69,16 +76,24 @@ export class BooksService {
       ],
       order: { title: 'ASC' },
     });
+
+    return BookResponseDto.fromEntities(books);
   }
 
-  async findOne(id: number): Promise<Book> {
+  // Internal helper — returns the raw entity so update/remove can work with it
+  private async getBookEntity(id: number): Promise<Book> {
     const book = await this.bookRepository.findOne({ where: { id } });
     if (!book) throw new NotFoundException(`Book #${id} not found`);
     return book;
   }
 
-  async update(id: number, dto: UpdateBookDto): Promise<Book> {
-    const book = await this.findOne(id);
+  async findOne(id: number): Promise<BookResponseDto> {
+    const book = await this.getBookEntity(id);
+    return BookResponseDto.fromEntity(book);
+  }
+
+  async update(id: number, dto: UpdateBookDto): Promise<BookResponseDto> {
+    const book = await this.getBookEntity(id);
 
     if (dto.isbn && dto.isbn !== book.isbn) {
       const conflict = await this.bookRepository.findOne({
@@ -97,12 +112,11 @@ export class BooksService {
 
     await this.redisService.del(BOOKS_CACHE_KEY);
 
-    return saved;
+    return BookResponseDto.fromEntity(saved);
   }
 
   async remove(id: number): Promise<void> {
-    const book = await this.findOne(id);
-    // TODO: check if the book is currently borrowed and prevent deletion if so (not implemented here, but should be in a real app)
+    const book = await this.getBookEntity(id);
     await this.bookRepository.softRemove(book);
 
     await this.redisService.del(BOOKS_CACHE_KEY);
