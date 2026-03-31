@@ -16,10 +16,10 @@ export class SeedTablesWithData1774901880013 implements MigrationInterface {
     `);
 
     // ========================
-    // Seed Borrowers
+    // Seed users
     // ========================
     await queryRunner.query(`
-      INSERT INTO borrowers (name, email)
+      INSERT INTO users (name, email)
       VALUES
         ('Ahmed Mohamed', 'ahmed@example.com'),
         ('Sara Ali', 'sara@example.com'),
@@ -31,7 +31,7 @@ export class SeedTablesWithData1774901880013 implements MigrationInterface {
     // (Assumes IDs start from 1)
     // ========================
     await queryRunner.query(`
-      INSERT INTO borrowing_records (book_id, borrower_id, due_date, status)
+      INSERT INTO borrowing_records (book_id, user_id, due_date, status)
       VALUES
         (1, 1, NOW() + INTERVAL 7 DAY, 'checked_out'),
         (2, 2, NOW() + INTERVAL 10 DAY, 'checked_out'),
@@ -46,7 +46,7 @@ export class SeedTablesWithData1774901880013 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      DELETE FROM borrowers
+      DELETE FROM users
       WHERE email IN ('ahmed@example.com', 'sara@example.com', 'omar@example.com');
     `);
 

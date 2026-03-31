@@ -25,7 +25,7 @@ export class CreateBorrowingRecordsTable1774899170881 implements MigrationInterf
             isNullable: false,
           },
           {
-            name: 'borrower_id',
+            name: 'user_id',
             type: 'int',
             isNullable: false,
           },
@@ -85,16 +85,15 @@ export class CreateBorrowingRecordsTable1774899170881 implements MigrationInterf
     await queryRunner.createForeignKey(
       'borrowing_records',
       new TableForeignKey({
-        name: 'fk_br_borrower_id',
-        columnNames: ['borrower_id'],
-        referencedTableName: 'borrowers',
+        name: 'fk_br_user_id',
+        columnNames: ['user_id'],
+        referencedTableName: 'users',
         referencedColumnNames: ['id'],
         onDelete: 'RESTRICT',
         onUpdate: 'CASCADE',
       }),
     );
 
-    // Index on status — used for overdue queries and active-borrow lookups
     await queryRunner.createIndex(
       'borrowing_records',
       new TableIndex({
@@ -103,7 +102,6 @@ export class CreateBorrowingRecordsTable1774899170881 implements MigrationInterf
       }),
     );
 
-    // Index on due_date — used to find overdue books efficiently
     await queryRunner.createIndex(
       'borrowing_records',
       new TableIndex({
@@ -112,16 +110,14 @@ export class CreateBorrowingRecordsTable1774899170881 implements MigrationInterf
       }),
     );
 
-    // Composite: (borrower_id, status) — "books currently held by borrower X"
     await queryRunner.createIndex(
       'borrowing_records',
       new TableIndex({
-        name: 'idx_br_borrower_status',
-        columnNames: ['borrower_id', 'status'],
+        name: 'idx_br_user_status',
+        columnNames: ['user_id', 'status'],
       }),
     );
 
-    // Composite: (book_id, status) — "is this book currently checked out?"
     await queryRunner.createIndex(
       'borrowing_records',
       new TableIndex({
@@ -133,10 +129,10 @@ export class CreateBorrowingRecordsTable1774899170881 implements MigrationInterf
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.dropIndex('borrowing_records', 'idx_br_book_status');
-    await queryRunner.dropIndex('borrowing_records', 'idx_br_borrower_status');
+    await queryRunner.dropIndex('borrowing_records', 'idx_br_user_status');
     await queryRunner.dropIndex('borrowing_records', 'idx_br_due_date');
     await queryRunner.dropIndex('borrowing_records', 'idx_br_status');
-    await queryRunner.dropForeignKey('borrowing_records', 'fk_br_borrower_id');
+    await queryRunner.dropForeignKey('borrowing_records', 'fk_br_user_id');
     await queryRunner.dropForeignKey('borrowing_records', 'fk_br_book_id');
     await queryRunner.dropTable('borrowing_records');
   }

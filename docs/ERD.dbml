@@ -21,7 +21,7 @@ Table books {
   }
 }
 
-Table borrowers {
+Table users {
   id              int          [pk, increment]
   name            varchar(150) [not null]
   email           varchar(255) [not null, unique]
@@ -31,15 +31,15 @@ Table borrowers {
   updated_at      timestamp    [not null, default: `now()`]
 
   indexes {
-    email      [name: 'idx_borrowers_email', unique]
-    deleted_at [name: 'idx_borrowers_deleted_at']
+    email      [name: 'idx_users_email', unique]
+    deleted_at [name: 'idx_users_deleted_at']
   }
 }
 
 Table borrowing_records {
   id            int        [pk, increment]
   book_id       int        [not null, ref: > books.id]
-  borrower_id   int        [not null, ref: > borrowers.id]
+  user_id   int        [not null, ref: > users.id]
   checkout_date timestamp  [not null, default: `now()`]
   due_date      timestamp  [not null]
   return_date   timestamp  [null]
@@ -48,11 +48,11 @@ Table borrowing_records {
   updated_at    timestamp  [not null, default: `now()`]
 
   indexes {
-    borrower_id              [name: 'idx_br_borrower_id']
+    user_id              [name: 'idx_br_user_id']
     book_id                  [name: 'idx_br_book_id']
     status                   [name: 'idx_br_status']
     due_date                 [name: 'idx_br_due_date']
-    (borrower_id, status)    [name: 'idx_br_borrower_status']
+    (user_id, status)    [name: 'idx_br_user_status']
     (book_id, status)        [name: 'idx_br_book_status']
   }
 }
