@@ -63,11 +63,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const payload = exception.getResponse();
 
       // ValidationPipe returns { message: string[] } — surface the array directly
-      if (
-        typeof payload === 'object' &&
-        payload !== null &&
-        'message' in payload
-      ) {
+      if (typeof payload === 'object' && 'message' in payload) {
         const msg = (payload as Record<string, unknown>).message;
         return {
           statusCode: status,
