@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
+import { LessThan, MoreThan, Repository } from 'typeorm';
 import { BorrowingRecord } from './entities/borrowing-record.entity';
 import { Book } from '../books/entities/book.entity';
 import { BooksService } from '../books/books.service';
@@ -24,31 +24,53 @@ export class BorrowingService {
   ) {}
 
   async checkout(dto: CheckoutBookDto): Promise<BorrowingRecord> {
-    const [book, user] = await Promise.all([
-      this.booksService.findOne(dto.bookId),
+    const [user, borrowed] = await Promise.all([
       this.usersService.findOne(dto.userId),
+      this.borrowingRepository.exists({
+        where: {
+          book: { id: dto.bookId },
+          user: { id: dto.userId },
+          status: BorrowingStatus.CHECKED_OUT,
+        },
+      }),
     ]);
 
-    if (book.availableQuantity < 1) {
-      throw new BadRequestException(`Book "${book.title}" is not available`);
+    if (borrowed) {
+      throw new BadRequestException('This user has already borrowed this book');
     }
 
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + (dto.loanDays ?? DEFAULT_LOAN_DAYS));
-
-    // Decrement quantity and create record atomically via QueryRunner
     const queryRunner =
       this.borrowingRepository.manager.connection.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      await queryRunner.manager.decrement(
+      const book = await queryRunner.manager.findOne(Book, {
+        where: { id: dto.bookId },
+        lock: { mode: 'pessimistic_write' }, // SELECT ... FOR UPDATE
+      });
+
+      if (!book) {
+        throw new NotFoundException(`Book #${dto.bookId} not found`);
+      }
+
+      if (book.availableQuantity < 1) {
+        throw new BadRequestException(`Book "${book.title}" is not available`);
+      }
+
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + (dto.loanDays ?? DEFAULT_LOAN_DAYS));
+
+      const result = await queryRunner.manager.decrement(
         Book,
-        { id: book.id },
+        { id: book.id, availableQuantity: MoreThan(0) },
         'availableQuantity',
         1,
       );
+
+      if (!result.affected || result.affected === 0) {
+        throw new BadRequestException(`Book "${book.title}" is not available`);
+      }
 
       const record = queryRunner.manager.create(BorrowingRecord, {
         book,
