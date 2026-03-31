@@ -56,8 +56,7 @@ export class BooksController {
   findAll(@Query('q') query?: string) {
     // TODO: Add pagination and sorting in the future
     // TODO: Implement caching for search results to improve performance
-    // TODO: Add logging for search queries to analyze popular search terms
-    // TODO: add rate limiting
+    // TODO: Add logging
     // TODO: Adding the search to be on the same find service
     if (query?.trim()) return this.booksService.search(query.trim());
     return this.booksService.findAll();
