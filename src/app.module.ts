@@ -13,6 +13,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { ReportsController } from './core/reports/reports.controller';
 import { ReportsModule } from './core/reports/reports.module';
+import { AuthModule } from './auth/auth.module';
+import { BasicAuthGuard } from './auth/guards/basic-auth.guard';
 
 @Module({
   imports: [
@@ -39,10 +41,12 @@ import { ReportsModule } from './core/reports/reports.module';
       ],
     }),
     ReportsModule,
+    AuthModule,
   ],
   controllers: [AppController, ReportsController],
   providers: [
     AppService,
+    { provide: APP_GUARD, useClass: BasicAuthGuard },
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

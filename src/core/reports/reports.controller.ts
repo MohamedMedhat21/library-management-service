@@ -3,6 +3,7 @@ import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { sendCsv } from 'src/common/utils/helpers';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('Reports')
 @Controller('reports')
@@ -23,6 +24,7 @@ export class ReportsController {
     );
   }
 
+  @Public()
   @Get('overdue-last-month/csv')
   @ApiOperation({ summary: 'Export overdue borrows of last month as CSV' })
   @ApiResponse({ status: 200, description: 'CSV file download' })
