@@ -1,10 +1,10 @@
 import { MigrationInterface, QueryRunner, Table, TableIndex } from 'typeorm';
 
-export class CreateBorrowersTable1774888329659 implements MigrationInterface {
+export class CreateUsersTable1774888329659 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(
       new Table({
-        name: 'borrowers',
+        name: 'users',
         columns: [
           {
             name: 'id',
@@ -55,18 +55,17 @@ export class CreateBorrowersTable1774888329659 implements MigrationInterface {
       true,
     );
 
-    // Index on deleted_at — all queries filter by this for soft delete
     await queryRunner.createIndex(
-      'borrowers',
+      'users',
       new TableIndex({
-        name: 'idx_borrowers_deleted_at',
+        name: 'idx_users_deleted_at',
         columnNames: ['deleted_at'],
       }),
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropIndex('borrowers', 'idx_borrowers_deleted_at');
-    await queryRunner.dropTable('borrowers');
+    await queryRunner.dropIndex('users', 'idx_users_deleted_at');
+    await queryRunner.dropTable('users');
   }
 }

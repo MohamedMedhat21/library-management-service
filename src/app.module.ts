@@ -6,6 +6,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import typeorm from './config/typeorm';
 import server from './config/server';
 import { RedisModule } from './infrastructure/cache/redis.module';
+import { BooksModule } from './core/books/books.module';
+import { BorrowingModule } from './core/borrowing/borrowing.module';
+import { UsersModule } from './core/users/users.module';
 
 @Module({
   imports: [
@@ -19,6 +22,9 @@ import { RedisModule } from './infrastructure/cache/redis.module';
         configService.getOrThrow('typeorm'),
     }),
     RedisModule,
+    BooksModule,
+    BorrowingModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

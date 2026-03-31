@@ -7,12 +7,7 @@ import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 
 export default defineConfig([
   {
-    ignores: [
-      'eslint.config.mjs',
-      'dist',
-      'node_modules',
-      'coverage',
-    ],
+    ignores: ['eslint.config.mjs', 'dist', 'node_modules', 'coverage'],
   },
 
   eslint.configs.recommended,
@@ -44,7 +39,16 @@ export default defineConfig([
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-extraneous-class': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        {
+          allowNumber: true,
+        },
+      ],
 
       // -----------------------------
       // 🛑 Unsafe Operations
