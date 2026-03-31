@@ -8,7 +8,7 @@ import { LessThan, MoreThan, Repository } from 'typeorm';
 import { BorrowingRecord } from './entities/borrowing-record.entity';
 import { Book } from '../books/entities/book.entity';
 import { BooksService } from '../books/books.service';
-import { CheckoutBookDto } from './dtos/checkout-dto';
+import { CheckoutBookDto } from './dtos/checkout.dto';
 import { BorrowingStatus } from './enums/borrowing-status.enum';
 import { UsersService } from '../users/users.service';
 

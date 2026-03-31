@@ -9,6 +9,8 @@ import { RedisModule } from './infrastructure/cache/redis.module';
 import { BooksModule } from './core/books/books.module';
 import { BorrowingModule } from './core/borrowing/borrowing.module';
 import { UsersModule } from './core/users/users.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -25,8 +27,23 @@ import { UsersModule } from './core/users/users.module';
     BooksModule,
     BorrowingModule,
     UsersModule,
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          name: 'default',
+          ttl: 60000, // 60 seconds window
+          limit: 100, // global default: 100 req / 60s
+        },
+      ],
+    }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

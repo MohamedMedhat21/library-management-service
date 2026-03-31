@@ -1,98 +1,337 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Library Management System
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A RESTful API built with **NestJS**, **TypeORM**, **MySQL**, and **Redis**, containerised with Docker Compose.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Table of Contents
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Running the App](#running-the-app)
+- [Database Migrations](#database-migrations)
+- [API Documentation](#api-documentation)
+- [API Endpoints](#api-endpoints)
+- [Project Structure](#project-structure)
 
-## Project setup
+---
 
-```bash
-$ npm install
-```
+## Prerequisites
 
-## Compile and run the project
+| Tool | Version |
+|------|---------|
+| Docker Desktop | 24+ |
+| Node.js (for local dev without Docker) | 20+ |
+| npm | 10+ |
+
+---
+
+## Quick Start
 
 ```bash
-# development
-$ npm run start
+# 1. Clone the repository
+git clone https://github.com/your-username/library-management-service.git
+cd library-management-service
 
-# watch mode
-$ npm run start:dev
+# 2. Copy the environment file
+cp .env.example .env
+# Edit .env if you need to change any defaults
 
-# production mode
-$ npm run start:prod
+# 3. Start all services (app + MySQL + Redis)
+docker compose up
+
+# 4. In a separate terminal, run migrations
+docker compose exec app npm run migration run
+
+# 5. Open Swagger UI
+open http://localhost:3000/api/docs
 ```
 
-## Run tests
+---
+
+## Environment Variables
+
+Copy `.env.example` to `.env` before starting. All variables have safe defaults for local development.
+
+```dotenv
+# Server
+SERVER_HOST=0.0.0.0
+SERVER_PORT=3000
+SERVER_ENV=development
+SERVER_COUNTRY=EG
+SERVER_TIMEZONE=Africa/Cairo
+
+# MySQL
+MYSQL_ROOT_PASSWORD=root
+MYSQL_DATABASE=library_local_db
+MYSQL_USER=user
+MYSQL_PASSWORD=password
+
+# App DB config (used by TypeORM)
+DATABASE_HOST=mysql
+DATABASE_PORT=3306
+DATABASE_USERNAME=user
+DATABASE_PASSWORD=password
+DATABASE_NAME=library_local_db
+
+# Redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+```
+
+> **Never commit your real `.env` file.** It is listed in `.gitignore` by default.
+
+---
+
+## Running the App
+
+### Development (with hot reload)
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker compose up
 ```
 
-## Deployment
+The app mounts your local source into the container and runs `nest start --watch`, so every file save triggers an automatic reload — exactly like running `npm run start:dev` locally.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Production
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Without Docker (local Node.js)
 
-## Resources
+```bash
+npm install
+npm run start:dev
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+Make sure MySQL and Redis are reachable and your `.env` points to them (change `DATABASE_HOST` and `REDIS_HOST` to `localhost`).
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+## Database Migrations
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+All migration commands work cross-platform (Windows, Mac, Linux):
 
-## Stay in touch
+```bash
+# Run all pending migrations
+npm run migration run
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# Create a blank migration file
+npm run migration create src/infrastructure/database/migrations/your-migration-name
 
-## License
+# Generate a migration from entity changes
+npm run migration generate src/infrastructure/database/migrations/your-migration-name
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# Revert the last migration
+npm run migration revert
+```
+
+Inside Docker:
+
+```bash
+docker compose exec app npm run migration run
+```
+
+---
+
+## API Documentation
+
+Interactive Swagger UI is available once the app is running:
+
+```
+http://localhost:3000/api/docs
+```
+
+You can try every endpoint directly from the browser — all request bodies have example values pre-filled.
+
+---
+
+## API Endpoints
+
+### Books
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/books` | Add a new book |
+| `GET` | `/books` | List all books |
+| `GET` | `/books?q={term}` | Search by title, author, or ISBN |
+| `GET` | `/books/:id` | Get a book by ID |
+| `PATCH` | `/books/:id` | Update a book |
+| `DELETE` | `/books/:id` | Soft-delete a book |
+
+**Rate limit:** `GET /books` — 20 requests per 60 seconds.
+
+#### POST /books — request body
+
+```json
+{
+  "title": "Clean Code",
+  "author": "Robert C. Martin",
+  "isbn": "9780132350884",
+  "availableQuantity": 5,
+  "shelfLocation": "A3-12"
+}
+```
+
+#### GET /books — response
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Clean Code",
+    "author": "Robert C. Martin",
+    "isbn": "9780132350884",
+    "availableQuantity": 4,
+    "shelfLocation": "A3-12",
+    "createdAt": "2026-01-01T10:00:00.000Z",
+    "updatedAt": "2026-01-02T09:00:00.000Z"
+  }
+]
+```
+
+---
+
+### users
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/users` | Register a user |
+| `GET` | `/users` | List all users |
+| `GET` | `/users/:id` | Get a user by ID |
+| `PATCH` | `/users/:id` | Update user details |
+| `DELETE` | `/users/:id` | Soft-delete a user |
+
+#### POST /users — request body
+
+```json
+{
+  "name": "Ahmed Hassan",
+  "email": "ahmed@example.com"
+}
+```
+
+#### GET /users/:id — response
+
+```json
+{
+  "id": 3,
+  "name": "Ahmed Hassan",
+  "email": "ahmed@example.com",
+  "registeredDate": "2026-01-01T10:00:00.000Z",
+  "createdAt": "2026-01-01T10:00:00.000Z",
+  "updatedAt": "2026-01-01T10:00:00.000Z"
+}
+```
+
+---
+
+### Borrowing
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/borrowing/checkout` | Check out a book |
+| `POST` | `/borrowing/:recordId/return` | Return a book |
+| `GET` | `/borrowing/users/:userId/active` | Books currently held by a user |
+| `GET` | `/borrowing/overdue` | All overdue borrowing records |
+
+**Rate limit:** `GET /borrowing/overdue` — 10 requests per 60 seconds.
+
+#### POST /borrowing/checkout — request body
+
+```json
+{
+  "bookId": 1,
+  "userId": 3,
+  "loanDays": 14
+}
+```
+
+#### POST /borrowing/checkout — response
+
+```json
+{
+  "id": 12,
+  "checkoutDate": "2026-01-15T09:00:00.000Z",
+  "dueDate": "2026-01-29T09:00:00.000Z",
+  "returnDate": null,
+  "status": "checked_out",
+  "book": { "id": 1, "title": "Clean Code" },
+  "user": { "id": 3, "name": "Ahmed Hassan" }
+}
+```
+
+#### GET /borrowing/overdue — response
+
+```json
+[
+  {
+    "id": 8,
+    "checkoutDate": "2025-12-01T09:00:00.000Z",
+    "dueDate": "2025-12-15T09:00:00.000Z",
+    "returnDate": null,
+    "status": "overdue",
+    "book": { "id": 2, "title": "The Pragmatic Programmer" },
+    "user": { "id": 5, "name": "Sara Ali" }
+  }
+]
+```
+
+---
+
+### Error responses
+
+All errors follow a consistent shape:
+
+```json
+{
+  "statusCode": 404,
+  "error": "NOT_FOUND",
+  "message": "Book #99 not found",
+  "path": "/books/99",
+  "timestamp": "2026-01-15T09:00:00.000Z"
+}
+```
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Validation error or business rule violation |
+| `404` | Resource not found |
+| `409` | Duplicate ISBN / email, or FK constraint |
+| `429` | Rate limit exceeded |
+| `500` | Unexpected server error |
+
+---
+
+## Project Structure
+
+```
+src/
+├── books/
+│   ├── controllers/   books.controller.ts
+│   ├── services/      books.service.ts
+│   ├── entities/      book.entity.ts
+│   └── dto/           create-book.dto.ts  update-book.dto.ts
+├── users/
+│   ├── controllers/   users.controller.ts
+│   ├── services/      users.service.ts
+│   ├── entities/      user.entity.ts
+│   └── dto/           create-user.dto.ts  update-user.dto.ts
+├── borrowing/
+│   ├── controllers/   borrowing.controller.ts
+│   ├── services/      borrowing.service.ts
+│   ├── entities/      borrowing-record.entity.ts
+│   └── dto/           checkout-book.dto.ts
+├── common/
+│   └── filters/       global-exception.filter.ts
+├── config/
+│   ├── typeorm.ts
+│   └── server.ts
+├── infrastructure/
+│   └── database/
+│       └── migrations/
+└── main.ts
+```
