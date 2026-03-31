@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { BooksService } from './books.service';
 import { Book } from './entities/book.entity';
-import { afterEach, beforeEach, describe, it } from 'node:test';
 import { RedisService } from 'src/infrastructure/cache/redis.service';
 
 type MockRepository<T> = Partial<Record<keyof Repository<T>, jest.Mock>>;
