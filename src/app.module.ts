@@ -11,6 +11,8 @@ import { BorrowingModule } from './core/borrowing/borrowing.module';
 import { UsersModule } from './core/users/users.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { ReportsController } from './core/reports/reports.controller';
+import { ReportsModule } from './core/reports/reports.module';
 
 @Module({
   imports: [
@@ -36,8 +38,9 @@ import { APP_GUARD } from '@nestjs/core';
         },
       ],
     }),
+    ReportsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, ReportsController],
   providers: [
     AppService,
     {

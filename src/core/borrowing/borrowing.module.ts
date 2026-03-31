@@ -16,5 +16,6 @@ import { UsersModule } from '../users/users.module';
   ],
   providers: [BorrowingService],
   controllers: [BorrowingController],
+  exports: [BorrowingService, TypeOrmModule],
 })
 export class BorrowingModule {}

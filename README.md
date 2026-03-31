@@ -11,8 +11,10 @@ A RESTful API built with **NestJS**, **TypeORM**, **MySQL**, and **Redis**, cont
 - [Environment Variables](#environment-variables)
 - [Running the App](#running-the-app)
 - [Database Migrations](#database-migrations)
+- [Authentication](#authentication)
 - [API Documentation](#api-documentation)
 - [API Endpoints](#api-endpoints)
+- [Running Tests](#running-tests)
 - [Project Structure](#project-structure)
 
 ---
@@ -34,9 +36,8 @@ A RESTful API built with **NestJS**, **TypeORM**, **MySQL**, and **Redis**, cont
 git clone https://github.com/your-username/library-management-service.git
 cd library-management-service
 
-# 2. Copy the environment file
+# 2. Copy the environment file and set your credentials
 cp .env.example .env
-# Edit .env if you need to change any defaults
 
 # 3. Start all services (app + MySQL + Redis)
 docker compose up
@@ -52,7 +53,7 @@ open http://localhost:3000/api/docs
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` before starting. All variables have safe defaults for local development.
+Copy `.env.example` to `.env`. All variables have safe defaults for local development.
 
 ```dotenv
 # Server
@@ -78,21 +79,25 @@ DATABASE_NAME=library_local_db
 # Redis
 REDIS_HOST=redis
 REDIS_PORT=6379
+
+# Basic Auth — change these before deploying
+API_AUTH_USERNAME=admin
+API_AUTH_PASSWORD=changeme
 ```
 
-> **Never commit your real `.env` file.** It is listed in `.gitignore` by default.
+> **Never commit your real `.env` file.** It is listed in `.gitignore`.
 
 ---
 
 ## Running the App
 
-### Development (with hot reload)
+### Development (hot reload)
 
 ```bash
 docker compose up
 ```
 
-The app mounts your local source into the container and runs `nest start --watch`, so every file save triggers an automatic reload — exactly like running `npm run start:dev` locally.
+File changes on your machine trigger automatic reload via `nest start --watch`.
 
 ### Production
 
@@ -100,30 +105,28 @@ The app mounts your local source into the container and runs `nest start --watch
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
-### Without Docker (local Node.js)
+### Without Docker
 
 ```bash
 npm install
 npm run start:dev
 ```
 
-Make sure MySQL and Redis are reachable and your `.env` points to them (change `DATABASE_HOST` and `REDIS_HOST` to `localhost`).
+Change `DATABASE_HOST` and `REDIS_HOST` to `localhost` in your `.env`.
 
 ---
 
 ## Database Migrations
-
-All migration commands work cross-platform (Windows, Mac, Linux):
 
 ```bash
 # Run all pending migrations
 npm run migration run
 
 # Create a blank migration file
-npm run migration create src/infrastructure/database/migrations/your-migration-name
+npm run migration create src/infrastructure/database/migrations/your-name
 
 # Generate a migration from entity changes
-npm run migration generate src/infrastructure/database/migrations/your-migration-name
+npm run migration generate src/infrastructure/database/migrations/your-name
 
 # Revert the last migration
 npm run migration revert
@@ -137,15 +140,40 @@ docker compose exec app npm run migration run
 
 ---
 
+## Authentication
+
+All API endpoints are protected with **HTTP Basic Authentication**.
+
+Set your credentials in `.env`:
+
+```dotenv
+API_AUTH_USERNAME=admin
+API_AUTH_PASSWORD=changeme
+```
+
+Include the credentials in every request:
+
+```bash
+# curl
+curl -u admin:changeme http://localhost:3000/books
+
+# Postman
+# Authorization tab → Type: Basic Auth → fill in username and password
+```
+
+In Swagger UI, click the **Authorize** button at the top right and enter your credentials. All subsequent requests will include them automatically.
+
+---
+
 ## API Documentation
 
-Interactive Swagger UI is available once the app is running:
+Interactive Swagger UI:
 
 ```
 http://localhost:3000/api/docs
 ```
 
-You can try every endpoint directly from the browser — all request bodies have example values pre-filled.
+All endpoints have documented request bodies, query parameters, and every possible response status code with example payloads.
 
 ---
 
@@ -153,131 +181,94 @@ You can try every endpoint directly from the browser — all request bodies have
 
 ### Books
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/books` | Add a new book |
-| `GET` | `/books` | List all books |
-| `GET` | `/books?q={term}` | Search by title, author, or ISBN |
-| `GET` | `/books/:id` | Get a book by ID |
-| `PATCH` | `/books/:id` | Update a book |
-| `DELETE` | `/books/:id` | Soft-delete a book |
+| Method | Endpoint | Description | Rate limit |
+|--------|----------|-------------|------------|
+| `POST` | `/books` | Add a new book | — |
+| `GET` | `/books` | List all books | 20 req / 60s |
+| `GET` | `/books?q={term}` | Search by title, author, or ISBN | 20 req / 60s |
+| `GET` | `/books/:id` | Get a book by ID | — |
+| `PATCH` | `/books/:id` | Update a book | — |
+| `DELETE` | `/books/:id` | Soft-delete a book | — |
 
-**Rate limit:** `GET /books` — 20 requests per 60 seconds.
-
-#### POST /books — request body
-
+**POST /books**
 ```json
-{
-  "title": "Clean Code",
-  "author": "Robert C. Martin",
-  "isbn": "9780132350884",
-  "availableQuantity": 5,
-  "shelfLocation": "A3-12"
-}
-```
+// Request
+{ "title": "Clean Code", "author": "Robert C. Martin", "isbn": "9780132350884", "availableQuantity": 5, "shelfLocation": "A3-12" }
 
-#### GET /books — response
-
-```json
-[
-  {
-    "id": 1,
-    "title": "Clean Code",
-    "author": "Robert C. Martin",
-    "isbn": "9780132350884",
-    "availableQuantity": 4,
-    "shelfLocation": "A3-12",
-    "createdAt": "2026-01-01T10:00:00.000Z",
-    "updatedAt": "2026-01-02T09:00:00.000Z"
-  }
-]
+// Response 201
+{ "id": 1, "title": "Clean Code", "author": "Robert C. Martin", "isbn": "9780132350884", "availableQuantity": 5, "shelfLocation": "A3-12", "createdAt": "2026-01-01T10:00:00.000Z", "updatedAt": "2026-01-01T10:00:00.000Z" }
 ```
 
 ---
 
-### users
+### Borrowers
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/users` | Register a user |
-| `GET` | `/users` | List all users |
-| `GET` | `/users/:id` | Get a user by ID |
-| `PATCH` | `/users/:id` | Update user details |
-| `DELETE` | `/users/:id` | Soft-delete a user |
+| `POST` | `/borrowers` | Register a borrower |
+| `GET` | `/borrowers` | List all borrowers |
+| `GET` | `/borrowers/:id` | Get a borrower by ID |
+| `PATCH` | `/borrowers/:id` | Update borrower details |
+| `DELETE` | `/borrowers/:id` | Soft-delete a borrower |
 
-#### POST /users — request body
-
+**POST /borrowers**
 ```json
-{
-  "name": "Ahmed Hassan",
-  "email": "ahmed@example.com"
-}
-```
+// Request
+{ "name": "Ahmed Hassan", "email": "ahmed@example.com" }
 
-#### GET /users/:id — response
-
-```json
-{
-  "id": 3,
-  "name": "Ahmed Hassan",
-  "email": "ahmed@example.com",
-  "registeredDate": "2026-01-01T10:00:00.000Z",
-  "createdAt": "2026-01-01T10:00:00.000Z",
-  "updatedAt": "2026-01-01T10:00:00.000Z"
-}
+// Response 201
+{ "id": 3, "name": "Ahmed Hassan", "email": "ahmed@example.com", "registeredDate": "2026-01-15T10:00:00.000Z" }
 ```
 
 ---
 
 ### Borrowing
 
+| Method | Endpoint | Description | Rate limit |
+|--------|----------|-------------|------------|
+| `POST` | `/borrowing/checkout` | Check out a book | — |
+| `POST` | `/borrowing/:recordId/return` | Return a book | — |
+| `GET` | `/borrowing/borrowers/:borrowerId/active` | Books currently held by a borrower | — |
+| `GET` | `/borrowing/overdue` | All overdue borrowing records | 10 req / 60s |
+
+**POST /borrowing/checkout**
+```json
+// Request
+{ "bookId": 1, "borrowerId": 3, "loanDays": 14 }
+
+// Response 201
+{ "id": 12, "checkoutDate": "2026-01-15T09:00:00.000Z", "dueDate": "2026-01-29T09:00:00.000Z", "returnDate": null, "status": "checked_out" }
+```
+
+---
+
+### Reports
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/borrowing/checkout` | Check out a book |
-| `POST` | `/borrowing/:recordId/return` | Return a book |
-| `GET` | `/borrowing/users/:userId/active` | Books currently held by a user |
-| `GET` | `/borrowing/overdue` | All overdue borrowing records |
+| `GET` | `/reports/analytics` | Borrowing analytics summary (defaults to last month) |
+| `GET` | `/reports/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD` | Analytics for a custom date range |
+| `GET` | `/reports/overdue-last-month/csv` | Download overdue borrows of last month as CSV |
+| `GET` | `/reports/overdue-last-month/xlsx` | Download overdue borrows of last month as XLSX |
+| `GET` | `/reports/borrowing-last-month/csv` | Download all borrows of last month as CSV |
+| `GET` | `/reports/borrowing-last-month/xlsx` | Download all borrows of last month as XLSX |
 
-**Rate limit:** `GET /borrowing/overdue` — 10 requests per 60 seconds.
-
-#### POST /borrowing/checkout — request body
-
+**GET /reports/analytics**
 ```json
+// Response 200
 {
-  "bookId": 1,
-  "userId": 3,
-  "loanDays": 14
+  "period": { "from": "2026-01-01T00:00:00.000Z", "to": "2026-01-31T23:59:59.000Z" },
+  "totalCheckouts": 42,
+  "totalReturned": 30,
+  "totalOverdue": 5,
+  "activeCheckouts": 7,
+  "topBorrowers": [
+    { "name": "Ahmed Hassan", "email": "ahmed@example.com", "checkouts": 8 }
+  ],
+  "topBooks": [
+    { "title": "Clean Code", "isbn": "9780132350884", "checkouts": 6 }
+  ]
 }
-```
-
-#### POST /borrowing/checkout — response
-
-```json
-{
-  "id": 12,
-  "checkoutDate": "2026-01-15T09:00:00.000Z",
-  "dueDate": "2026-01-29T09:00:00.000Z",
-  "returnDate": null,
-  "status": "checked_out",
-  "book": { "id": 1, "title": "Clean Code" },
-  "user": { "id": 3, "name": "Ahmed Hassan" }
-}
-```
-
-#### GET /borrowing/overdue — response
-
-```json
-[
-  {
-    "id": 8,
-    "checkoutDate": "2025-12-01T09:00:00.000Z",
-    "dueDate": "2025-12-15T09:00:00.000Z",
-    "returnDate": null,
-    "status": "overdue",
-    "book": { "id": 2, "title": "The Pragmatic Programmer" },
-    "user": { "id": 5, "name": "Sara Ali" }
-  }
-]
 ```
 
 ---
@@ -299,6 +290,7 @@ All errors follow a consistent shape:
 | Status | Meaning |
 |--------|---------|
 | `400` | Validation error or business rule violation |
+| `401` | Missing or invalid Basic Auth credentials |
 | `404` | Resource not found |
 | `409` | Duplicate ISBN / email, or FK constraint |
 | `429` | Rate limit exceeded |
@@ -306,27 +298,58 @@ All errors follow a consistent shape:
 
 ---
 
+## Running Tests
+
+```bash
+# Run all unit tests
+npm run test
+
+# Watch mode
+npm run test:watch
+
+# Coverage report
+npm run test:cov
+```
+
+Unit tests cover the `BooksService` module with the following cases:
+
+- `create` — success, duplicate ISBN conflict
+- `findAll` — returns list, returns empty array
+- `findOne` — found, not found
+- `search` — matching results, no results
+- `update` — success, book not found, ISBN conflict
+- `remove` — success, book not found
+
+---
+
 ## Project Structure
 
 ```
 src/
+├── auth/
+│   ├── basic-auth.strategy.ts
+│   ├── basic-auth.guard.ts
+│   └── auth.module.ts
 ├── books/
-│   ├── controllers/   books.controller.ts
-│   ├── services/      books.service.ts
-│   ├── entities/      book.entity.ts
-│   └── dto/           create-book.dto.ts  update-book.dto.ts
-├── users/
-│   ├── controllers/   users.controller.ts
-│   ├── services/      users.service.ts
-│   ├── entities/      user.entity.ts
-│   └── dto/           create-user.dto.ts  update-user.dto.ts
+│   ├── controllers/    books.controller.ts
+│   ├── services/       books.service.ts
+│   ├── entities/       book.entity.ts
+│   └── dto/            create-book.dto.ts  update-book.dto.ts
+├── borrowers/
+│   ├── controllers/    borrowers.controller.ts
+│   ├── services/       borrowers.service.ts
+│   ├── entities/       borrower.entity.ts
+│   └── dto/            create-borrower.dto.ts  update-borrower.dto.ts
 ├── borrowing/
-│   ├── controllers/   borrowing.controller.ts
-│   ├── services/      borrowing.service.ts
-│   ├── entities/      borrowing-record.entity.ts
-│   └── dto/           checkout-book.dto.ts
+│   ├── controllers/    borrowing.controller.ts
+│   ├── services/       borrowing.service.ts
+│   ├── entities/       borrowing-record.entity.ts
+│   └── dto/            checkout-book.dto.ts
+├── reports/
+│   ├── controllers/    reports.controller.ts
+│   └── services/       reports.service.ts
 ├── common/
-│   └── filters/       global-exception.filter.ts
+│   └── filters/        global-exception.filter.ts
 ├── config/
 │   ├── typeorm.ts
 │   └── server.ts
