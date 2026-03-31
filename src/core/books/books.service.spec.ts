@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { BooksService } from './books.service';
 import { Book } from './entities/book.entity';
+import { describe, beforeEach, afterEach, it } from 'node:test';
+import { RedisService } from 'src/infrastructure/cache/redis.service';
 
 type MockRepository<T> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
@@ -28,6 +30,12 @@ const mockBook: Book = {
   updatedAt: new Date('2026-01-01'),
 };
 
+const mockRedisService = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+};
+
 describe('BooksService', () => {
   let service: BooksService;
   let repository: MockRepository<Book>;
@@ -39,6 +47,10 @@ describe('BooksService', () => {
         {
           provide: getRepositoryToken(Book),
           useValue: createMockRepository<Book>(),
+        },
+        {
+          provide: RedisService,
+          useValue: mockRedisService,
         },
       ],
     }).compile();
@@ -83,21 +95,44 @@ describe('BooksService', () => {
   });
 
   describe('findAll', () => {
-    it('should return an array of books', async () => {
+    it('should return cached books if cache exists (cache hit)', async () => {
+      const cachedBooks = [
+        {
+          ...mockBook,
+          createdAt: mockBook.createdAt.toISOString(),
+          updatedAt: mockBook.updatedAt.toISOString(),
+        },
+      ];
+
+      mockRedisService.get.mockResolvedValue(JSON.stringify(cachedBooks));
+
+      const result = await service.findAll();
+
+      expect(mockRedisService.get).toHaveBeenCalled();
+      expect(repository.find).not.toHaveBeenCalled();
+      expect(result).toEqual(cachedBooks);
+    });
+
+    it('should fetch from DB and cache result when cache miss', async () => {
+      mockRedisService.get.mockResolvedValue(null); // 👈 cache miss
       repository.find!.mockResolvedValue([mockBook]);
 
       const result = await service.findAll();
 
+      expect(mockRedisService.get).toHaveBeenCalled();
       expect(repository.find).toHaveBeenCalledWith({
         order: { createdAt: 'DESC' },
       });
+      expect(mockRedisService.set).toHaveBeenCalled(); // 👈 cached
       expect(result).toEqual([mockBook]);
     });
 
-    it('should return an empty array when no books exist', async () => {
+    it('should return empty array when no books exist (cache miss)', async () => {
+      mockRedisService.get.mockResolvedValue(null);
       repository.find!.mockResolvedValue([]);
 
       const result = await service.findAll();
+
       expect(result).toEqual([]);
     });
   });
