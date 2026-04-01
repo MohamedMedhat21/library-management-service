@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBasicAuth,
   ApiBody,
   ApiOperation,
   ApiParam,
@@ -25,6 +26,7 @@ import { CreateBookDto } from './dtos/create-book.dto';
 import { UpdateBookDto } from './dtos/update-book.dto';
 
 @ApiTags('Books')
+@ApiBasicAuth('basic-auth')
 @Controller('books')
 export class BooksController {
   constructor(private readonly booksService: BooksService) {}
@@ -55,10 +57,7 @@ export class BooksController {
   @ApiResponse({ status: 429, description: 'Too many requests' })
   findAll(@Query('q') query?: string) {
     // TODO: Add pagination and sorting in the future
-    // TODO: Implement caching for search results to improve performance
-    // TODO: Add logging for search queries to analyze popular search terms
-    // TODO: add rate limiting
-    // TODO: Adding the search to be on the same find service
+    // TODO: Adding the search to be on the same find service -searchable-
     if (query?.trim()) return this.booksService.search(query.trim());
     return this.booksService.findAll();
   }

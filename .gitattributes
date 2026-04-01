@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+# Force LF for scripts (important for Husky)
+*.sh text eol=lf
+
+# Windows-specific files (optional)
+*.bat text eol=crlf

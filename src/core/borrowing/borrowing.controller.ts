@@ -12,6 +12,7 @@ import { BorrowingService } from './borrowing.service';
 import { CheckoutBookDto } from './dtos/checkout.dto';
 import { Throttle } from '@nestjs/throttler';
 import {
+  ApiBasicAuth,
   ApiBody,
   ApiOperation,
   ApiParam,
@@ -20,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('Borrowing')
+@ApiBasicAuth('basic-auth')
 @Controller('borrowing')
 export class BorrowingController {
   constructor(private readonly borrowingService: BorrowingService) {}

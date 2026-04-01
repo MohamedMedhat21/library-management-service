@@ -4,10 +4,12 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
-  Logger,
+  Inject,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { EntityNotFoundError, QueryFailedError } from 'typeorm';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 interface ErrorResponse {
   statusCode: number;
@@ -23,14 +25,16 @@ const MYSQL_NO_REFERENCED = 'ER_NO_REFERENCED_ROW_2';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(GlobalExceptionFilter.name);
+  constructor(
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const { statusCode, message } = this.resolveException(exception);
+    const { statusCode, message } = this.resolve(exception);
 
     const body: ErrorResponse = {
       statusCode,
@@ -40,21 +44,28 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
     };
 
+    const meta = {
+      context: 'ExceptionFilter',
+      method: request.method,
+      url: request.url,
+      status: statusCode,
+    };
+
     if (statusCode >= 500) {
-      this.logger.error(
-        `[${request.method}] ${request.url} → ${statusCode}`,
-        exception instanceof Error ? exception.stack : String(exception),
-      );
+      this.logger.error('Unhandled exception', {
+        ...meta,
+        stack: exception instanceof Error ? exception.stack : String(exception),
+      });
     } else {
-      this.logger.warn(
-        `[${request.method}] ${request.url} → ${statusCode}: ${JSON.stringify(message)}`,
-      );
+      this.logger.warn('Request error', { ...meta, message });
     }
 
     response.status(statusCode).json(body);
   }
 
-  private resolveException(exception: unknown): {
+  // ── Resolution logic ─────────────────────────────────────────────────────
+
+  private resolve(exception: unknown): {
     statusCode: number;
     message: string | string[];
   } {
@@ -62,19 +73,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const status = exception.getStatus();
       const payload = exception.getResponse();
 
-      // ValidationPipe returns { message: string[] } — surface the array directly
-      if (
-        typeof payload === 'object' &&
-        payload !== null &&
-        'message' in payload
-      ) {
+      if (typeof payload === 'object' && 'message' in payload) {
         const msg = (payload as Record<string, unknown>).message;
         return {
           statusCode: status,
           message: Array.isArray(msg) ? msg : String(msg),
         };
       }
-
       return {
         statusCode: status,
         message: typeof payload === 'string' ? payload : exception.message,
@@ -89,15 +94,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     if (exception instanceof QueryFailedError) {
-      return this.resolveQueryFailedError(exception);
-    }
-
-    if (exception instanceof Error) {
-      this.logger.error('Unhandled exception', exception.stack);
-      return {
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: 'An unexpected error occurred. Please try again later.',
-      };
+      return this.resolveQueryError(exception);
     }
 
     return {
@@ -106,37 +103,35 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     };
   }
 
-  private resolveQueryFailedError(exception: QueryFailedError): {
+  private resolveQueryError(exception: QueryFailedError): {
     statusCode: number;
     message: string;
   } {
     const code = (exception as QueryFailedError & { code?: string }).code;
 
     switch (code) {
-      // Unique constraint violation (e.g. duplicate ISBN or email)
       case MYSQL_DUPLICATE_ENTRY:
         return {
           statusCode: HttpStatus.CONFLICT,
           message: this.extractDuplicateField(exception.message),
         };
-
-      // Cannot delete parent row — FK constraint (e.g. deleting book with active borrows)
       case MYSQL_FK_CONSTRAINT:
         return {
           statusCode: HttpStatus.CONFLICT,
           message:
             'This record cannot be deleted because it is referenced by other records.',
         };
-
-      // Cannot insert child row — referenced row does not exist
       case MYSQL_NO_REFERENCED:
         return {
           statusCode: HttpStatus.BAD_REQUEST,
           message: 'A referenced record does not exist.',
         };
-
       default:
-        this.logger.error('Unhandled DB error', exception.stack);
+        this.logger.error('Unhandled DB error', {
+          context: 'ExceptionFilter',
+          code,
+          stack: exception.stack,
+        });
         return {
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
           message: 'A database error occurred. Please try again later.',
@@ -147,11 +142,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   private extractDuplicateField(message: string): string {
     const match = message.match(/for key '(.+?)'/);
     if (match) {
-      // Take the last segment after the last dot or underscore group
-      const keyName = match[1].toLowerCase();
-      if (keyName.includes('isbn'))
-        return 'A book with this ISBN already exists.';
-      if (keyName.includes('email'))
+      const key = match[1].toLowerCase();
+      if (key.includes('isbn')) return 'A book with this ISBN already exists.';
+      if (key.includes('email'))
         return 'This email address is already registered.';
     }
     return 'A record with this value already exists.';

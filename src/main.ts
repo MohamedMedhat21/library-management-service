@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import {
@@ -5,11 +6,19 @@ import {
   ValidationPipe,
   VersioningType,
 } from '@nestjs/common';
-import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    // Suppress NestJS default logger during bootstrap — Winston takes over immediately after
+    bufferLogs: true,
+  });
+
+  app.use(helmet());
+
+  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -19,7 +28,11 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  // GlobalExceptionFilter now receives Winston via DI — register via app.get
+  // so the injected logger is resolved from the NestJS container
+  const { GlobalExceptionFilter } =
+    await import('./common/filters/global-exception.filter.js');
+  app.useGlobalFilters(app.get(GlobalExceptionFilter));
 
   app.enableVersioning({
     type: VersioningType.URI,
@@ -29,7 +42,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
   app.enableCors({ origin: '*' });
 
-  // ── Swagger ────────────────────────────────────────────
+  // ── Swagger ──────────────────────────────────────────────────────────────
   const config = new DocumentBuilder()
     .setTitle('Library Management API')
     .setDescription(
@@ -37,8 +50,10 @@ async function bootstrap() {
     )
     .setVersion('1.0')
     .addTag('Books', 'Book inventory management')
-    .addTag('Users', 'user registration and management')
+    .addTag('Users', 'User registration and management')
     .addTag('Borrowing', 'Checkout, return, and overdue tracking')
+    .addTag('Reports', 'Analytics and CSV exports')
+    .addBasicAuth({ type: 'http', scheme: 'basic' }, 'basic-auth')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -51,9 +66,15 @@ async function bootstrap() {
 
   await app.listen(
     process.env.SERVER_PORT ?? 3000,
-    process.env.SERVER_HOST ?? 'localhost',
+    process.env.SERVER_HOST ?? '0.0.0.0',
   );
 
-  console.log(`Swagger docs: ${await app.getUrl()}/api/docs`);
+  const url = await app.getUrl();
+  app
+    .get(WINSTON_MODULE_NEST_PROVIDER)
+    .log(`Application running on ${url}`, 'Bootstrap');
+  app
+    .get(WINSTON_MODULE_NEST_PROVIDER)
+    .log(`Swagger docs: ${url}/api/docs`, 'Bootstrap');
 }
 bootstrap();

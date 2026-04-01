@@ -1,19 +1,24 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { User } from './entities/user.entity';
+import { BorrowingService } from '../borrowing/borrowing.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @Inject(forwardRef(() => BorrowingService))
+    private readonly borrowingService: BorrowingService,
   ) {}
 
   async create(dto: CreateUserDto): Promise<User> {
@@ -66,6 +71,15 @@ export class UsersService {
 
   async remove(id: number): Promise<void> {
     const user = await this.findOne(id);
+    const hasBorrowing = await this.borrowingService.hasActiveBorrowing({
+      userId: id,
+    });
+
+    if (hasBorrowing) {
+      throw new ConflictException(
+        `User #${id} has active borrowing records and cannot be deleted`,
+      );
+    }
     await this.userRepository.softRemove(user);
   }
 }
