@@ -1,13 +1,20 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, MoreThan, Repository } from 'typeorm';
+import {
+  FindOptionsWhere,
+  IsNull,
+  LessThan,
+  MoreThan,
+  Repository,
+} from 'typeorm';
 import { BorrowingRecord } from './entities/borrowing-record.entity';
 import { Book } from '../books/entities/book.entity';
-import { BooksService } from '../books/books.service';
 import { CheckoutBookDto } from './dtos/checkout.dto';
 import { BorrowingStatus } from './enums/borrowing-status.enum';
 import { UsersService } from '../users/users.service';
@@ -19,7 +26,7 @@ export class BorrowingService {
   constructor(
     @InjectRepository(BorrowingRecord)
     private readonly borrowingRepository: Repository<BorrowingRecord>,
-    private readonly booksService: BooksService,
+    @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
   ) {}
 
@@ -168,5 +175,28 @@ export class BorrowingService {
       relations: ['book', 'user'],
       order: { dueDate: 'ASC' },
     });
+  }
+
+  async hasActiveBorrowing(filters: {
+    bookId?: number;
+    userId?: number;
+  }): Promise<boolean> {
+    if (!filters.bookId && !filters.userId) {
+      throw new Error('At least one filter must be provided');
+    }
+
+    const where: FindOptionsWhere<BorrowingRecord> = {
+      returnDate: IsNull(),
+    };
+
+    if (filters.bookId) {
+      where.book = { id: filters.bookId };
+    }
+
+    if (filters.userId) {
+      where.user = { id: filters.userId };
+    }
+
+    return this.borrowingRepository.exists({ where });
   }
 }

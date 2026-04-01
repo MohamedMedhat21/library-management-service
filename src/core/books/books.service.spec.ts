@@ -7,6 +7,7 @@ import { Book } from './entities/book.entity';
 import { BookResponseDto } from './dtos/book-response.dto';
 import { RedisService } from 'src/infrastructure/cache/redis.service';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston/dist/winston.constants';
+import { BorrowingService } from '../borrowing/borrowing.service';
 
 type MockRepository<T> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
@@ -70,6 +71,12 @@ describe('BooksService', () => {
             warn: jest.fn(),
             info: jest.fn(),
             debug: jest.fn(),
+          },
+        },
+        {
+          provide: BorrowingService,
+          useValue: {
+            hasActiveBorrowing: jest.fn(),
           },
         },
       ],

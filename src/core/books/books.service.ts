@@ -13,9 +13,8 @@ import { UpdateBookDto } from './dtos/update-book.dto';
 import { BookResponseDto } from './dtos/book-response.dto';
 import { Book } from './entities/book.entity';
 import { RedisService } from 'src/infrastructure/cache/redis.service';
-
-const BOOKS_CACHE_KEY = 'books:all';
-const BOOKS_CACHE_TTL = 600; // 10 minutes
+import { BorrowingService } from '../borrowing/borrowing.service';
+import { BOOKS_CACHE_KEY, BOOKS_CACHE_TTL } from './utils/constants';
 
 @Injectable()
 export class BooksService {
@@ -23,6 +22,7 @@ export class BooksService {
     @InjectRepository(Book)
     private readonly bookRepository: Repository<Book>,
     private readonly redisService: RedisService,
+    private readonly borrowingService: BorrowingService,
     @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {}
 
@@ -140,7 +140,20 @@ export class BooksService {
 
   async remove(id: number): Promise<void> {
     const book = await this.getBookEntity(id);
-    // TODO: check if the book is currently borrowed and prevent deletion if so (not implemented here, but should be in a real app)
+    const borrowed = await this.borrowingService.hasActiveBorrowing({
+      bookId: id,
+    });
+
+    if (borrowed) {
+      this.logger.warn('Book deletion failed — book is currently borrowed', {
+        context: 'BooksService',
+        id,
+      });
+      throw new ConflictException(
+        `Book #${id} is currently borrowed and cannot be deleted`,
+      );
+    }
+
     await this.bookRepository.softRemove(book);
 
     await this.redisService.del(BOOKS_CACHE_KEY);
