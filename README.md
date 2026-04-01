@@ -16,6 +16,7 @@ A RESTful API built with **NestJS**, **TypeORM**, **MySQL**, and **Redis**, cont
 - [API Endpoints](#api-endpoints)
 - [Running Tests](#running-tests)
 - [Project Structure](#project-structure)
+- [Database Schema](#database-schema)
 
 ---
 
@@ -59,6 +60,7 @@ Copy `.env.example` to `.env`. All variables have safe defaults for local develo
 # Server
 SERVER_HOST=0.0.0.0
 SERVER_PORT=3000
+# development / production
 SERVER_ENV=development
 SERVER_COUNTRY=EG
 SERVER_TIMEZONE=Africa/Cairo
@@ -69,18 +71,18 @@ MYSQL_DATABASE=library_local_db
 MYSQL_USER=user
 MYSQL_PASSWORD=password
 
-# App DB config (used by TypeORM)
+# mysql inside Docker, localhost otherwise
 DATABASE_HOST=mysql
 DATABASE_PORT=3306
 DATABASE_USERNAME=user
 DATABASE_PASSWORD=password
 DATABASE_NAME=library_local_db
 
-# Redis
+# redis inside Docker, localhost otherwise
 REDIS_HOST=redis
 REDIS_PORT=6379
 
-# Basic Auth — change these before deploying
+# HTTP Basic Auth
 API_AUTH_USERNAME=admin
 API_AUTH_PASSWORD=changeme
 ```
@@ -112,30 +114,24 @@ npm install
 npm run start:dev
 ```
 
-Change `DATABASE_HOST` and `REDIS_HOST` to `localhost` in your `.env`.
+Change `DATABASE_HOST=localhost` and `REDIS_HOST=localhost` to `localhost` in your `.env`.
 
 ---
 
 ## Database Migrations
 
 ```bash
-# Run all pending migrations
-npm run migration run
-
-# Create a blank migration file
-npm run migration create src/infrastructure/database/migrations/your-name
-
-# Generate a migration from entity changes
-npm run migration generate src/infrastructure/database/migrations/your-name
-
-# Revert the last migration
-npm run migration revert
+npm run migration:run:dev        # development
+npm run migration:run            # production (from compiled dist)
+npm run migration:generate --name=name
+npm run migration:create --name=name
+npm run migration:revert
 ```
 
 Inside Docker:
 
 ```bash
-docker compose exec app npm run migration run
+docker compose exec app npm run migration:run:dev
 ```
 
 ---
