@@ -157,30 +157,20 @@ curl -u admin:changeme http://localhost:3000/books
 # Authorization tab → Type: Basic Auth → fill in username and password
 ```
 
-In Swagger UI, click the **Authorize** button at the top right and enter your credentials. All subsequent requests will include them automatically.
-
----
-
-## API Documentation
-
-Interactive Swagger UI:
-
-```
-http://localhost:3000/api/docs
-```
-
-All endpoints have documented request bodies, query parameters, and every possible response status code with example payloads.
+In Swagger UI (``http://localhost:3000/api/docs``), click **Authorize** and enter your credentials. Routes decorated with ``@Public()`` (currently only ``GET /``) bypass authentication.
 
 ---
 
 ## API Endpoints
+
+All endpoints are prefixed with ``/api/v1``.
 
 ### Books
 
 | Method | Endpoint | Description | Rate limit |
 |--------|----------|-------------|------------|
 | `POST` | `/books` | Add a new book | — |
-| `GET` | `/books` | List all books | 20 req / 60s |
+| `GET` | `/books` | List all books (Redis-cached 10 min) | 20 req / 60s |
 | `GET` | `/books?q={term}` | Search by title, author, or ISBN | 20 req / 60s |
 | `GET` | `/books/:id` | Get a book by ID | — |
 | `PATCH` | `/books/:id` | Update a book | — |
@@ -197,17 +187,17 @@ All endpoints have documented request bodies, query parameters, and every possib
 
 ---
 
-### Borrowers
+### Users
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/borrowers` | Register a borrower |
-| `GET` | `/borrowers` | List all borrowers |
-| `GET` | `/borrowers/:id` | Get a borrower by ID |
-| `PATCH` | `/borrowers/:id` | Update borrower details |
-| `DELETE` | `/borrowers/:id` | Soft-delete a borrower |
+| `POST` | `/users` | Register a user |
+| `GET` | `/users` | List all users |
+| `GET` | `/users/:id` | Get a user by ID |
+| `PATCH` | `/users/:id` | Update user details |
+| `DELETE` | `/users/:id` | Soft-delete a user |
 
-**POST /borrowers**
+**POST /users**
 ```json
 // Request
 { "name": "Ahmed Hassan", "email": "ahmed@example.com" }
@@ -224,17 +214,23 @@ All endpoints have documented request bodies, query parameters, and every possib
 |--------|----------|-------------|------------|
 | `POST` | `/borrowing/checkout` | Check out a book | — |
 | `POST` | `/borrowing/:recordId/return` | Return a book | — |
-| `GET` | `/borrowing/borrowers/:borrowerId/active` | Books currently held by a borrower | — |
+| `GET` | `/borrowing/users/:userId/active` | Books currently held by a user | — |
 | `GET` | `/borrowing/overdue` | All overdue borrowing records | 10 req / 60s |
 
 **POST /borrowing/checkout**
 ```json
 // Request
-{ "bookId": 1, "borrowerId": 3, "loanDays": 14 }
+{ "bookId": 1, "userId": 3, "loanDays": 14 }
 
 // Response 201
 { "id": 12, "checkoutDate": "2026-01-15T09:00:00.000Z", "dueDate": "2026-01-29T09:00:00.000Z", "returnDate": null, "status": "checked_out" }
 ```
+
+``loanDays`` defaults to ``14``. Uses a ``pessimistic write lock`` on ``books.available_quantity``. Returns ``400`` if no copies available or the user already has the same book out. **Response** ``201``: borrowing record with ``status: "checked_out"``.
+
+**POST /borrowing/:recordId/return —** atomically increments quantity and sets status: ``"returned"``. Returns ``400`` if already returned.
+
+**GET /borrowing/overdue —** before responding, bulk-updates any past-due ``checked_out`` records to ``overdue``.
 
 ---
 
@@ -242,12 +238,11 @@ All endpoints have documented request bodies, query parameters, and every possib
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/reports/analytics` | Borrowing analytics summary (defaults to last month) |
-| `GET` | `/reports/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD` | Analytics for a custom date range |
-| `GET` | `/reports/overdue-last-month/csv` | Download overdue borrows of last month as CSV |
-| `GET` | `/reports/overdue-last-month/xlsx` | Download overdue borrows of last month as XLSX |
-| `GET` | `/reports/borrowing-last-month/csv` | Download all borrows of last month as CSV |
-| `GET` | `/reports/borrowing-last-month/xlsx` | Download all borrows of last month as XLSX |
+| `GET` | `/reports/analytics` | Analytics summary (defaults to last month) |
+| `GET` | `/reports/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD` | Custom date range |
+| `GET` | `/reports/overdue-last-month/csv` | Overdue records as CSV download |
+| `GET` | `/reports/borrowing-last-month/csv` | All records as CSV download |
+
 
 **GET /reports/analytics**
 ```json
@@ -258,7 +253,7 @@ All endpoints have documented request bodies, query parameters, and every possib
   "totalReturned": 30,
   "totalOverdue": 5,
   "activeCheckouts": 7,
-  "topBorrowers": [
+  "topUsers": [
     { "name": "Ahmed Hassan", "email": "ahmed@example.com", "checkouts": 8 }
   ],
   "topBooks": [
@@ -269,28 +264,18 @@ All endpoints have documented request bodies, query parameters, and every possib
 
 ---
 
-### Error responses
+### Error Envelope
 
 All errors follow a consistent shape:
 
 ```json
 {
-  "statusCode": 404,
-  "error": "NOT_FOUND",
+  "statusCode": 404, "error": "NOT_FOUND",
   "message": "Book #99 not found",
-  "path": "/books/99",
-  "timestamp": "2026-01-15T09:00:00.000Z"
+  "path": "/api/v1/books/99",
+  "timestamp": "..."
 }
 ```
-
-| Status | Meaning |
-|--------|---------|
-| `400` | Validation error or business rule violation |
-| `401` | Missing or invalid Basic Auth credentials |
-| `404` | Resource not found |
-| `409` | Duplicate ISBN / email, or FK constraint |
-| `429` | Rate limit exceeded |
-| `500` | Unexpected server error |
 
 ---
 
@@ -307,14 +292,7 @@ npm run test:watch
 npm run test:cov
 ```
 
-Unit tests cover the `BooksService` module with the following cases:
-
-- `create` — success, duplicate ISBN conflict
-- `findAll` — returns list, returns empty array
-- `findOne` — found, not found
-- `search` — matching results, no results
-- `update` — success, book not found, ISBN conflict
-- `remove` — success, book not found
+``BooksService`` is fully unit-tested: ``create``, ``findAll`` (cache hit/miss/empty), ``findOne``, ``search``, ``update``, ``remove``.
 
 ---
 
@@ -322,35 +300,50 @@ Unit tests cover the `BooksService` module with the following cases:
 
 ```
 src/
-├── auth/
+├── auth/                           # Authentication logic (Guards & Strategies)
 │   ├── basic-auth.strategy.ts
 │   ├── basic-auth.guard.ts
 │   └── auth.module.ts
-├── books/
-│   ├── controllers/    books.controller.ts
-│   ├── services/       books.service.ts
-│   ├── entities/       book.entity.ts
-│   └── dto/            create-book.dto.ts  update-book.dto.ts
-├── borrowers/
-│   ├── controllers/    borrowers.controller.ts
-│   ├── services/       borrowers.service.ts
-│   ├── entities/       borrower.entity.ts
-│   └── dto/            create-borrower.dto.ts  update-borrower.dto.ts
-├── borrowing/
-│   ├── controllers/    borrowing.controller.ts
-│   ├── services/       borrowing.service.ts
-│   ├── entities/       borrowing-record.entity.ts
-│   └── dto/            checkout-book.dto.ts
-├── reports/
-│   ├── controllers/    reports.controller.ts
-│   └── services/       reports.service.ts
-├── common/
-│   └── filters/        global-exception.filter.ts
-├── config/
-│   ├── typeorm.ts
-│   └── server.ts
-├── infrastructure/
-│   └── database/
-│       └── migrations/
-└── main.ts
+├── common/                         # Shared decorators, filters, and modules
+│   ├── decorators/
+│   ├── filters/
+│   │   └── global-exception.filter.ts
+│   └── shared.module.ts
+├── config/                         # Configuration files
+│   ├── typeorm.ts                  # Database configuration
+│   └── server.ts                   # Server-specific settings
+├── core/                           # Main business logic domains
+│   ├── books/
+│   │   ├── controllers/            # books.controller.ts
+│   │   ├── services/               # books.service.ts
+│   │   ├── entities/               # book.entity.ts
+│   │   └── dto/                    # create-book.dto.ts, update-book.dto.ts
+│   ├── borrowing/
+│   │   ├── controllers/            # borrowing.controller.ts
+│   │   ├── services/               # borrowing.service.ts
+│   │   ├── entities/               # borrowing-record.entity.ts
+│   │   ├── enums/                  # Status enums
+│   │   └── dto/                    # checkout-book.dto.ts
+│   ├── reports/
+│   │   ├── controllers/            # reports.controller.ts
+│   │   ├── services/               # reports.service.ts
+│   │   └── helpers/                # Data formatting helpers
+│   └── users/
+│       ├── controllers/            # users.controller.ts
+│       ├── services/               # users.service.ts
+│       ├── entities/               # user.entity.ts
+│       └── dto/                    # create-user.dto.ts, update-user.dto.ts
+├── infrastructure/                 # External services and system utilities
+│   ├── cache/                      # Redis module, provider, and service
+│   ├── database/
+│   │   └── migrations/             # TypeORM migration files
+│   └── utils/
+│       └── http-logger.middleware.ts
+├── app.module.ts                   # Main application module
+└── main.ts                         # Application entry point
 ```
+
+---
+## Database Schema
+
+The ERD is defined in ``ERD.dbml``. Paste its contents into dbdiagram.io to render it interactively.
