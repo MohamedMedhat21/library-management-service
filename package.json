@@ -44,11 +44,13 @@
     "csv-stringify": "^6.7.0",
     "ioredis": "^5.10.1",
     "mysql2": "^3.20.0",
+    "nest-winston": "^1.10.2",
     "passport": "^0.7.0",
     "passport-http": "^0.3.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.28"
+    "typeorm": "^0.3.28",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
