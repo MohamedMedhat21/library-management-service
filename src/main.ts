@@ -50,6 +50,7 @@ async function bootstrap() {
     .addTag('Users', 'User registration and management')
     .addTag('Borrowing', 'Checkout, return, and overdue tracking')
     .addTag('Reports', 'Analytics and CSV exports')
+    .addBasicAuth({ type: 'http', scheme: 'basic' }, 'basic-auth')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

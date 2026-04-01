@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBasicAuth,
   ApiBody,
   ApiOperation,
   ApiParam,
@@ -25,6 +26,7 @@ import { CreateBookDto } from './dtos/create-book.dto';
 import { UpdateBookDto } from './dtos/update-book.dto';
 
 @ApiTags('Books')
+@ApiBasicAuth('basic-auth')
 @Controller('books')
 export class BooksController {
   constructor(private readonly booksService: BooksService) {}

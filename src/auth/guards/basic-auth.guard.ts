@@ -14,8 +14,11 @@ export class BasicAuthGuard extends AuthGuard('basic') {
       context.getHandler(),
       context.getClass(),
     ]);
+    if (isPublic) return true;
 
-    if (isPublic) {
+    const request = context.switchToHttp().getRequest<{ path: string }>();
+    const swaggerPaths = ['/api/docs', '/api/docs-json', '/api/docs/'];
+    if (swaggerPaths.some((p) => request.path.startsWith(p))) {
       return true;
     }
 
