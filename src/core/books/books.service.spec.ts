@@ -4,7 +4,9 @@ import { Repository } from 'typeorm';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { BooksService } from './books.service';
 import { Book } from './entities/book.entity';
+import { BookResponseDto } from './dtos/book-response.dto';
 import { RedisService } from 'src/infrastructure/cache/redis.service';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston/dist/winston.constants';
 
 type MockRepository<T> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
@@ -35,6 +37,16 @@ const mockRedisService = {
   del: jest.fn(),
 };
 
+const mockBookResponseDto: BookResponseDto = {
+  title: mockBook.title,
+  author: mockBook.author,
+  isbn: mockBook.isbn,
+  availableQuantity: mockBook.availableQuantity,
+  shelfLocation: mockBook.shelfLocation,
+  createdAt: mockBook.createdAt,
+  updatedAt: mockBook.updatedAt,
+};
+
 describe('BooksService', () => {
   let service: BooksService;
   let repository: MockRepository<Book>;
@@ -50,6 +62,15 @@ describe('BooksService', () => {
         {
           provide: RedisService,
           useValue: mockRedisService,
+        },
+        {
+          provide: WINSTON_MODULE_PROVIDER,
+          useValue: {
+            error: jest.fn(),
+            warn: jest.fn(),
+            info: jest.fn(),
+            debug: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -82,7 +103,7 @@ describe('BooksService', () => {
       });
       expect(repository.create).toHaveBeenCalledWith(dto);
       expect(repository.save).toHaveBeenCalledWith(mockBook);
-      expect(result).toEqual(mockBook);
+      expect(result).toEqual(mockBookResponseDto);
     });
 
     it('should throw ConflictException when ISBN already exists', async () => {
@@ -97,7 +118,7 @@ describe('BooksService', () => {
     it('should return cached books if cache exists (cache hit)', async () => {
       const cachedBooks = [
         {
-          ...mockBook,
+          ...mockBookResponseDto,
           createdAt: mockBook.createdAt.toISOString(),
           updatedAt: mockBook.updatedAt.toISOString(),
         },
@@ -113,7 +134,7 @@ describe('BooksService', () => {
     });
 
     it('should fetch from DB and cache result when cache miss', async () => {
-      mockRedisService.get.mockResolvedValue(null); // 👈 cache miss
+      mockRedisService.get.mockResolvedValue(null);
       repository.find!.mockResolvedValue([mockBook]);
 
       const result = await service.findAll();
@@ -122,8 +143,8 @@ describe('BooksService', () => {
       expect(repository.find).toHaveBeenCalledWith({
         order: { createdAt: 'DESC' },
       });
-      expect(mockRedisService.set).toHaveBeenCalled(); // 👈 cached
-      expect(result).toEqual([mockBook]);
+      expect(mockRedisService.set).toHaveBeenCalled();
+      expect(result).toEqual([mockBookResponseDto]);
     });
 
     it('should return empty array when no books exist (cache miss)', async () => {
@@ -143,7 +164,7 @@ describe('BooksService', () => {
       const result = await service.findOne(1);
 
       expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
-      expect(result).toEqual(mockBook);
+      expect(result).toEqual(mockBookResponseDto);
     });
 
     it('should throw NotFoundException when book does not exist', async () => {
@@ -169,7 +190,7 @@ describe('BooksService', () => {
           ]),
         }),
       );
-      expect(result).toEqual([mockBook]);
+      expect(result).toEqual([mockBookResponseDto]);
     });
 
     it('should return empty array when no books match', async () => {
