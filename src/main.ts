@@ -8,12 +8,15 @@ import {
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     // Suppress NestJS default logger during bootstrap — Winston takes over immediately after
     bufferLogs: true,
   });
+
+  app.use(helmet());
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
