@@ -55,8 +55,7 @@ export class BooksController {
   @ApiResponse({ status: 429, description: 'Too many requests' })
   findAll(@Query('q') query?: string) {
     // TODO: Add pagination and sorting in the future
-    // TODO: Add audit logging here
-    // TODO: Adding the search to be on the same find service
+    // TODO: Adding the search to be on the same find service -searchable-
     if (query?.trim()) return this.booksService.search(query.trim());
     return this.booksService.findAll();
   }

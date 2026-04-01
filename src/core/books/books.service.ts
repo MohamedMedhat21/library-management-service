@@ -138,6 +138,7 @@ export class BooksService {
     return BookResponseDto.fromEntity(saved);
   }
 
+  // TODO: Add audit logging here
   async remove(id: number): Promise<void> {
     const book = await this.getBookEntity(id);
     const borrowed = await this.borrowingService.hasActiveBorrowing({
