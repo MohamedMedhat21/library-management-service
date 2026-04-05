@@ -1,0 +1,42 @@
+{
+  "rules": {
+    /* ========================
+       Possible Errors
+    ======================== */
+    // "no-undef": "error",
+    "no-unreachable": "error",
+    "no-debugger": "error",
+    "no-constant-condition": "warn",
+
+    /* ========================
+       Best Practices
+    ======================== */
+    "eqeqeq": "error",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+
+    /* ========================
+       Variables
+    ======================== */
+    "no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "no-use-before-define": "warn",
+
+    /* ========================
+       ES / Modern JS
+    ======================== */
+    "prefer-const": "warn",
+    "no-var": "error",
+
+    /* ========================
+       Safety
+    ======================== */
+    "no-async-promise-executor": "error",
+    "require-await": "warn"
+  }
+}

@@ -9,6 +9,6 @@
       "remoteRoot": "/var/app",
       "localRoot": "${workspaceFolder}",
       "restart": true
-    },
+    }
   ]
 }

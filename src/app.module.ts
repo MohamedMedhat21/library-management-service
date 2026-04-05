@@ -27,7 +27,7 @@ import { SharedModule } from './common/shared.module';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) =>
+      useFactory: (configService: ConfigService) =>
         configService.getOrThrow('typeorm'),
     }),
     RedisModule,

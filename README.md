@@ -23,11 +23,11 @@ A RESTful API built with **NestJS**, **TypeORM**, **MySQL**, and **Redis**, cont
 
 ## Prerequisites
 
-| Tool | Version |
-|------|---------|
-| Docker Desktop | 24+ |
-| Node.js (for local dev without Docker) | 20+ |
-| npm | 10+ |
+| Tool                                   | Version |
+| -------------------------------------- | ------- |
+| Docker Desktop                         | 24+     |
+| Node.js (for local dev without Docker) | 20+     |
+| npm                                    | 10+     |
 
 ---
 
@@ -158,26 +158,27 @@ curl -u admin:changeme http://localhost:3000/books
 # Authorization tab → Type: Basic Auth → fill in username and password
 ```
 
-In Swagger UI (``http://localhost:3000/api/docs``), click **Authorize** and enter your credentials. Routes decorated with ``@Public()`` (currently only ``GET /``) bypass authentication.
+In Swagger UI (`http://localhost:3000/api/docs`), click **Authorize** and enter your credentials. Routes decorated with `@Public()` (currently only `GET /`) bypass authentication.
 
 ---
 
 ## API Endpoints
 
-All endpoints are prefixed with ``/api/v1``.
+All endpoints are prefixed with `/api/v1`.
 
 ### Books
 
-| Method | Endpoint | Description | Rate limit |
-|--------|----------|-------------|------------|
-| `POST` | `/books` | Add a new book | — |
-| `GET` | `/books` | List all books (Redis-cached 10 min) | 20 req / 60s |
-| `GET` | `/books?q={term}` | Search by title, author, or ISBN | 20 req / 60s |
-| `GET` | `/books/:id` | Get a book by ID | — |
-| `PATCH` | `/books/:id` | Update a book | — |
-| `DELETE` | `/books/:id` | Soft-delete a book | — |
+| Method   | Endpoint          | Description                          | Rate limit   |
+| -------- | ----------------- | ------------------------------------ | ------------ |
+| `POST`   | `/books`          | Add a new book                       | —            |
+| `GET`    | `/books`          | List all books (Redis-cached 10 min) | 20 req / 60s |
+| `GET`    | `/books?q={term}` | Search by title, author, or ISBN     | 20 req / 60s |
+| `GET`    | `/books/:id`      | Get a book by ID                     | —            |
+| `PATCH`  | `/books/:id`      | Update a book                        | —            |
+| `DELETE` | `/books/:id`      | Soft-delete a book                   | —            |
 
 **POST /books**
+
 ```json
 // Request
 { "title": "Clean Code", "author": "Robert C. Martin", "isbn": "9780132350884", "availableQuantity": 5, "shelfLocation": "A3-12" }
@@ -190,15 +191,16 @@ All endpoints are prefixed with ``/api/v1``.
 
 ### Users
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/users` | Register a user |
-| `GET` | `/users` | List all users |
-| `GET` | `/users/:id` | Get a user by ID |
-| `PATCH` | `/users/:id` | Update user details |
-| `DELETE` | `/users/:id` | Soft-delete a user |
+| Method   | Endpoint     | Description         |
+| -------- | ------------ | ------------------- |
+| `POST`   | `/users`     | Register a user     |
+| `GET`    | `/users`     | List all users      |
+| `GET`    | `/users/:id` | Get a user by ID    |
+| `PATCH`  | `/users/:id` | Update user details |
+| `DELETE` | `/users/:id` | Soft-delete a user  |
 
 **POST /users**
+
 ```json
 // Request
 { "name": "Ahmed Hassan", "email": "ahmed@example.com" }
@@ -211,14 +213,15 @@ All endpoints are prefixed with ``/api/v1``.
 
 ### Borrowing
 
-| Method | Endpoint | Description | Rate limit |
-|--------|----------|-------------|------------|
-| `POST` | `/borrowing/checkout` | Check out a book | — |
-| `POST` | `/borrowing/:recordId/return` | Return a book | — |
-| `GET` | `/borrowing/users/:userId/active` | Books currently held by a user | — |
-| `GET` | `/borrowing/overdue` | All overdue borrowing records | 10 req / 60s |
+| Method | Endpoint                          | Description                    | Rate limit   |
+| ------ | --------------------------------- | ------------------------------ | ------------ |
+| `POST` | `/borrowing/checkout`             | Check out a book               | —            |
+| `POST` | `/borrowing/:recordId/return`     | Return a book                  | —            |
+| `GET`  | `/borrowing/users/:userId/active` | Books currently held by a user | —            |
+| `GET`  | `/borrowing/overdue`              | All overdue borrowing records  | 10 req / 60s |
 
 **POST /borrowing/checkout**
+
 ```json
 // Request
 { "bookId": 1, "userId": 3, "loanDays": 14 }
@@ -227,29 +230,32 @@ All endpoints are prefixed with ``/api/v1``.
 { "id": 12, "checkoutDate": "2026-01-15T09:00:00.000Z", "dueDate": "2026-01-29T09:00:00.000Z", "returnDate": null, "status": "checked_out" }
 ```
 
-``loanDays`` defaults to ``14``. Uses a ``pessimistic write lock`` on ``books.available_quantity``. Returns ``400`` if no copies available or the user already has the same book out. **Response** ``201``: borrowing record with ``status: "checked_out"``.
+`loanDays` defaults to `14`. Uses a `pessimistic write lock` on `books.available_quantity`. Returns `400` if no copies available or the user already has the same book out. **Response** `201`: borrowing record with `status: "checked_out"`.
 
-**POST /borrowing/:recordId/return —** atomically increments quantity and sets status: ``"returned"``. Returns ``400`` if already returned.
+**POST /borrowing/:recordId/return —** atomically increments quantity and sets status: `"returned"`. Returns `400` if already returned.
 
-**GET /borrowing/overdue —** before responding, bulk-updates any past-due ``checked_out`` records to ``overdue``.
+**GET /borrowing/overdue —** before responding, bulk-updates any past-due `checked_out` records to `overdue`.
 
 ---
 
 ### Reports
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/reports/analytics` | Analytics summary (defaults to last month) |
-| `GET` | `/reports/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD` | Custom date range |
-| `GET` | `/reports/overdue-last-month/csv` | Overdue records as CSV download |
-| `GET` | `/reports/borrowing-last-month/csv` | All records as CSV download |
-
+| Method | Endpoint                                           | Description                                |
+| ------ | -------------------------------------------------- | ------------------------------------------ |
+| `GET`  | `/reports/analytics`                               | Analytics summary (defaults to last month) |
+| `GET`  | `/reports/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD` | Custom date range                          |
+| `GET`  | `/reports/overdue-last-month/csv`                  | Overdue records as CSV download            |
+| `GET`  | `/reports/borrowing-last-month/csv`                | All records as CSV download                |
 
 **GET /reports/analytics**
+
 ```json
 // Response 200
 {
-  "period": { "from": "2026-01-01T00:00:00.000Z", "to": "2026-01-31T23:59:59.000Z" },
+  "period": {
+    "from": "2026-01-01T00:00:00.000Z",
+    "to": "2026-01-31T23:59:59.000Z"
+  },
   "totalCheckouts": 42,
   "totalReturned": 30,
   "totalOverdue": 5,
@@ -271,7 +277,8 @@ All errors follow a consistent shape:
 
 ```json
 {
-  "statusCode": 404, "error": "NOT_FOUND",
+  "statusCode": 404,
+  "error": "NOT_FOUND",
   "message": "Book #99 not found",
   "path": "/api/v1/books/99",
   "timestamp": "..."
@@ -293,7 +300,7 @@ npm run test:watch
 npm run test:cov
 ```
 
-``BooksService`` is fully unit-tested: ``create``, ``findAll`` (cache hit/miss/empty), ``findOne``, ``search``, ``update``, ``remove``.
+`BooksService` is fully unit-tested: `create`, `findAll` (cache hit/miss/empty), `findOne`, `search`, `update`, `remove`.
 
 ---
 
@@ -345,13 +352,16 @@ src/
 ```
 
 ---
+
 ## Database Schema
 
-The ERD is defined in ``ERD.dbml``. Paste its contents into dbdiagram.io to render it interactively.
+The ERD is defined in `ERD.dbml`. Paste its contents into dbdiagram.io to render it interactively.
 
 ---
+
 ## Upcoming Enhancements
-- [ ] lint migration (``ESLint`` + ``Prettier`` to ``Oxlint`` + ``Oxfmt``)
+
+- [ ] lint migration (`ESLint` + `Prettier` to `Oxlint` + `Oxfmt`)
 - [ ] Audit logs
 - [ ] optimize docker image size
 - [ ] CI/CD Workflows
