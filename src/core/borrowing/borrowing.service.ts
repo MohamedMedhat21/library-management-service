@@ -151,9 +151,7 @@ export class BorrowingService {
       .getMany();
   }
 
-  /**
-   * Uses idx_br_due_date and idx_br_status indexes.
-   */
+  // Uses idx_br_due_date and idx_br_status indexes.
   async getOverdueBooks(): Promise<BorrowingRecord[]> {
     const now = new Date();
 
@@ -197,6 +195,6 @@ export class BorrowingService {
       where.user = { id: filters.userId };
     }
 
-    return this.borrowingRepository.exists({ where });
+    return await this.borrowingRepository.exists({ where });
   }
 }

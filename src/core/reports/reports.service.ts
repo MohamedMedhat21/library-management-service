@@ -30,7 +30,7 @@ export class ReportsService {
       qb.andWhere('br.status IN (:...statuses)', { statuses });
     }
 
-    return qb.getMany();
+    return await qb.getMany();
   }
 
   private toCsv(records: BorrowingRecord[]): string {

@@ -6,7 +6,7 @@ export class RedisService {
   constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) {}
 
   async get(key: string): Promise<string | null> {
-    return this.redis.get(key);
+    return await this.redis.get(key);
   }
 
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
