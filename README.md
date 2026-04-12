@@ -17,7 +17,7 @@ A RESTful API built with **NestJS**, **TypeORM**, **MySQL**, and **Redis**, cont
 - [Running Tests](#running-tests)
 - [Project Structure](#project-structure)
 - [Database Schema](#database-schema)
-- [Upcoming Enhancements](#upcoming-enhancements)
+- [Backlog](#backlog)
 
 ---
 
@@ -350,9 +350,12 @@ src/
 The ERD is defined in ``ERD.dbml``. Paste its contents into dbdiagram.io to render it interactively.
 
 ---
-## Upcoming Enhancements
-- [ ] lint migration (``ESLint`` + ``Prettier`` to ``Oxlint`` + ``Oxfmt``)
+## Backlog
+- [x] lint migration (``ESLint`` + ``Prettier`` to ``Oxlint`` + ``Oxfmt``)
 - [ ] Audit logs
 - [ ] optimize docker image size
 - [ ] CI/CD Workflows
 - [ ] books pagination and sorting
+- implementing other architectures
+  - [ ] clean architecture
+  - [ ] microservices architecture
